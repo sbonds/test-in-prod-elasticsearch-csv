@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Runtime.Serialization.Formatters;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
@@ -112,6 +113,12 @@ namespace Crypton.Elasticsearch.CSVExport
             var token = (CancellationToken)tokenObj;
 
             var conf = new ConnectionConfiguration(new Uri(ClusterUrl));
+            string username = "OMITTED";
+            string password = "OMITTED";
+
+            conf.BasicAuthentication(username, password);
+            ServicePointManager.ServerCertificateValidationCallback += (sender, cert, chain, errors) => true;
+
             var client = new ElasticLowLevelClient(conf);
 
             JsonSerializer serializer = new JsonSerializer();
@@ -146,6 +153,12 @@ namespace Crypton.Elasticsearch.CSVExport
             }
             else
             {
+                // FAILS due to
+                //    The remote server returned an error: (400) Bad Request.
+                // The query goes in as
+                //    GET: /(indexPattern)/_search?ignore_unavailable=true&q=(query entered)&size=500
+                // Which doesn't seem to match the GET API method docs for current versions of Elasticsearch, which are for fetching a specific document ID, not searching.
+                // Looks like Elasticsearch has changed too much in the past 7 years to use this code.
                 throw response.OriginalException;
             }
         }
